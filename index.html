@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>카공픽 — 카공할 땐, 카공픽.</title>
+  <meta name="description" content="대학생이 공부 조건에 맞는 카페를 쉽고 빠르게 찾는 카공 특화 지도" />
+  <meta name="theme-color" content="#F6F5F2" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- 상단 바 -->
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="카공픽 홈">
+        <img src="assets/logo.svg" alt="" width="34" height="34" />
+        <span class="brand-text">
+          <strong>카공픽</strong>
+          <small>카공할 땐, 카공픽.</small>
+        </span>
+      </a>
+
+      <div class="search">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="searchInput" type="search" placeholder="카페 이름이나 주소로 검색" autocomplete="off" aria-label="카페 검색" />
+        <button class="search-clear" id="searchClear" type="button" aria-label="검색어 지우기" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="topbar-actions">
+        <label class="region-select">
+          <span class="sr-only">지역 선택</span>
+          <select id="regionSelect" aria-label="지역 선택"></select>
+        </label>
+        <button class="icon-btn" id="locateBtn" type="button" aria-label="내 위치 보기" title="내 위치">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7.5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- 조건 필터 -->
+    <section class="filters" aria-label="공부 조건 필터">
+      <div class="chips" id="chips" role="group" aria-label="조건 칩"></div>
+      <div class="filter-meta">
+        <span class="result-count" id="resultCount" aria-live="polite"></span>
+        <button class="text-btn" id="resetBtn" type="button" hidden>필터 초기화</button>
+      </div>
+    </section>
+
+    <!-- 목록 / 상세 패널 (모바일: 바텀시트) -->
+    <aside class="panel" id="panel" data-sheet="peek" aria-label="카페 목록">
+      <button class="sheet-handle" id="sheetHandle" type="button" aria-label="목록 펼치기/접기">
+        <span></span>
+      </button>
+
+      <div class="panel-view" id="listView">
+        <div class="sample-notice" id="sampleNotice" hidden>
+          <strong>확인 중</strong> 위치·주소는 공공데이터 기준이에요. 콘센트·좌석·소음·영업시간은 현장 확인 후 채워지며, ‘정보 없음’은 아직 확인 전이라는 뜻이에요.
+        </div>
+        <ul class="cafe-list" id="cafeList" role="list"></ul>
+        <div class="state" id="emptyState" hidden>
+          <div class="state-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="21" cy="21" r="12"/><path d="m30 30 9 9"/><path d="M16 21h10"/></svg>
+          </div>
+          <p class="state-title">조건에 맞는 카페가 없어요</p>
+          <p class="state-desc">조건을 하나씩 빼보거나 검색어를 바꿔보세요.</p>
+          <button class="btn" id="emptyResetBtn" type="button">조건 초기화</button>
+        </div>
+        <div class="state" id="errorState" hidden>
+          <div class="state-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="16"/><path d="M24 16v10M24 31v.5"/></svg>
+          </div>
+          <p class="state-title">카페 정보를 불러오지 못했어요</p>
+          <p class="state-desc" id="errorDesc">네트워크 상태를 확인하고 다시 시도해주세요.</p>
+          <button class="btn" type="button" onclick="location.reload()">다시 시도</button>
+        </div>
+      </div>
+
+      <div class="panel-view" id="detailView" hidden></div>
+    </aside>
+
+    <!-- 지도 -->
+    <main class="map-wrap">
+      <div id="map" role="application" aria-label="카페 지도"></div>
+      <div class="map-legend" aria-hidden="true">
+        <span><i class="lg-open"></i>영업 중</span>
+        <span><i class="lg-closed"></i>영업 종료</span>
+        <span><i class="lg-unknown"></i>시간 정보 없음</span>
+      </div>
+      <div class="map-fallback" id="mapFallback" hidden>
+        <p class="state-title">지도를 불러오지 못했어요</p>
+        <p class="state-desc">목록에서 카페 정보를 계속 볼 수 있어요.</p>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data/regions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
